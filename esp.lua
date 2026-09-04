@@ -9,7 +9,7 @@ local Camera = Workspace.CurrentCamera
 local ESP = {
     Enabled = false,
     BoxEnabled = false,
-    BoxFillEnabled = false,      -- NEW: separate toggle for filled box
+    BoxFillEnabled = false,
     NameEnabled = false,
     ThreeDBoxEnabled = false,
     TracerLocalEnabled = false,
@@ -44,7 +44,7 @@ local function createDrawings(player)
             Filled = false,
             Transparency = 0.5
         }),
-        BoxFill = newDrawing("Square", {            -- filled box (separate toggle)
+        BoxFill = newDrawing("Square", {
             Color = Color3.fromRGB(255, 255, 255), -- white
             Thickness = 1,
             Filled = true,
@@ -66,40 +66,20 @@ local function createDrawings(player)
             Thickness = 1,
             Transparency = 1
         }),
-        TracerLocalOutline = newDrawing("Line", {
-            Color = Color3.fromRGB(0, 0, 0),        -- black outline
-            Thickness = 1.5,
-            Transparency = 0.5
-        }),
         TracerMouse = newDrawing("Line", {
             Color = Color3.fromRGB(255, 255, 255), -- white
             Thickness = 1,
             Transparency = 1
-        }),
-        TracerMouseOutline = newDrawing("Line", {
-            Color = Color3.fromRGB(0, 0, 0),        -- black outline
-            Thickness = 1.5,
-            Transparency = 0.5
         }),
         TracerTop = newDrawing("Line", {
             Color = Color3.fromRGB(255, 255, 255), -- white
             Thickness = 1,
             Transparency = 1
         }),
-        TracerTopOutline = newDrawing("Line", {
-            Color = Color3.fromRGB(0, 0, 0),        -- black outline
-            Thickness = 1.5,
-            Transparency = 0.5
-        }),
         TracerBottom = newDrawing("Line", {
             Color = Color3.fromRGB(255, 255, 255), -- white
             Thickness = 1,
             Transparency = 1
-        }),
-        TracerBottomOutline = newDrawing("Line", {
-            Color = Color3.fromRGB(0, 0, 0),        -- black outline
-            Thickness = 1.5,
-            Transparency = 0.5
         })
     }
 
@@ -131,7 +111,7 @@ function ESP:ToggleBox(state)
     end
 end
 
-function ESP:ToggleBoxFill(state)          -- NEW toggle
+function ESP:ToggleBoxFill(state)
     self.BoxFillEnabled = state
     if not state then
         for _, drawings in pairs(self.Drawings) do
@@ -166,7 +146,6 @@ function ESP:ToggleTracerLocal(state)
     if not state then
         for _, drawings in pairs(self.Drawings) do
             drawings.TracerLocal.Visible = false
-            drawings.TracerLocalOutline.Visible = false
         end
     end
 end
@@ -176,7 +155,6 @@ function ESP:ToggleTracerMouse(state)
     if not state then
         for _, drawings in pairs(self.Drawings) do
             drawings.TracerMouse.Visible = false
-            drawings.TracerMouseOutline.Visible = false
         end
     end
 end
@@ -186,7 +164,6 @@ function ESP:ToggleTracerTop(state)
     if not state then
         for _, drawings in pairs(self.Drawings) do
             drawings.TracerTop.Visible = false
-            drawings.TracerTopOutline.Visible = false
         end
     end
 end
@@ -196,7 +173,6 @@ function ESP:ToggleTracerBottom(state)
     if not state then
         for _, drawings in pairs(self.Drawings) do
             drawings.TracerBottom.Visible = false
-            drawings.TracerBottomOutline.Visible = false
         end
     end
 end
@@ -205,7 +181,7 @@ end
 function ESP:Toggle(state)
     self.Enabled = state
     self:ToggleBox(state)
-    self:ToggleBoxFill(state)   -- include new toggle
+    self:ToggleBoxFill(state)
     self:ToggleName(state)
     self:Toggle3DBox(state)
     self:ToggleTracerLocal(state)
@@ -309,13 +285,9 @@ RunService.RenderStepped:Connect(function()
                 drawings.ThreeDOutlines[i].Visible = false
             end
             drawings.TracerLocal.Visible = false
-            drawings.TracerLocalOutline.Visible = false
             drawings.TracerMouse.Visible = false
-            drawings.TracerMouseOutline.Visible = false
             drawings.TracerTop.Visible = false
-            drawings.TracerTopOutline.Visible = false
             drawings.TracerBottom.Visible = false
-            drawings.TracerBottomOutline.Visible = false
             continue
         end
 
@@ -332,13 +304,9 @@ RunService.RenderStepped:Connect(function()
                 drawings.ThreeDOutlines[i].Visible = false
             end
             drawings.TracerLocal.Visible = false
-            drawings.TracerLocalOutline.Visible = false
             drawings.TracerMouse.Visible = false
-            drawings.TracerMouseOutline.Visible = false
             drawings.TracerTop.Visible = false
-            drawings.TracerTopOutline.Visible = false
             drawings.TracerBottom.Visible = false
-            drawings.TracerBottomOutline.Visible = false
             continue
         end
 
@@ -369,13 +337,9 @@ RunService.RenderStepped:Connect(function()
                 drawings.ThreeDOutlines[i].Visible = false
             end
             drawings.TracerLocal.Visible = false
-            drawings.TracerLocalOutline.Visible = false
             drawings.TracerMouse.Visible = false
-            drawings.TracerMouseOutline.Visible = false
             drawings.TracerTop.Visible = false
-            drawings.TracerTopOutline.Visible = false
             drawings.TracerBottom.Visible = false
-            drawings.TracerBottomOutline.Visible = false
             continue
         end
 
@@ -448,7 +412,7 @@ RunService.RenderStepped:Connect(function()
             end
         end
 
-        -- Tracers: get target screen position (use root part center)
+        -- Tracers (solid white, no outlines)
         local targetScreen, targetOnScreen = getTargetScreenPos(character)
         if targetScreen and targetOnScreen then
             -- Local Player Tracer
@@ -458,77 +422,55 @@ RunService.RenderStepped:Connect(function()
                 if localRoot then
                     local localScreen = worldToScreen(localRoot.Position)
                     if localScreen then
-                        drawings.TracerLocalOutline.From = localScreen
-                        drawings.TracerLocalOutline.To = targetScreen
-                        drawings.TracerLocalOutline.Visible = true
                         drawings.TracerLocal.From = localScreen
                         drawings.TracerLocal.To = targetScreen
                         drawings.TracerLocal.Visible = true
                     else
                         drawings.TracerLocal.Visible = false
-                        drawings.TracerLocalOutline.Visible = false
                     end
                 else
                     drawings.TracerLocal.Visible = false
-                    drawings.TracerLocalOutline.Visible = false
                 end
             else
                 drawings.TracerLocal.Visible = false
-                drawings.TracerLocalOutline.Visible = false
             end
 
             -- Mouse Tracer
             if ESP.TracerMouseEnabled then
                 local mouseScreen = Vector2.new(mousePos.X, mousePos.Y)
-                drawings.TracerMouseOutline.From = mouseScreen
-                drawings.TracerMouseOutline.To = targetScreen
-                drawings.TracerMouseOutline.Visible = true
                 drawings.TracerMouse.From = mouseScreen
                 drawings.TracerMouse.To = targetScreen
                 drawings.TracerMouse.Visible = true
             else
                 drawings.TracerMouse.Visible = false
-                drawings.TracerMouseOutline.Visible = false
             end
 
             -- Top Tracer (from top center of screen)
             if ESP.TracerTopEnabled then
                 local screenSize = Camera.ViewportSize
                 local topScreen = Vector2.new(screenSize.X / 2, 0)
-                drawings.TracerTopOutline.From = topScreen
-                drawings.TracerTopOutline.To = targetScreen
-                drawings.TracerTopOutline.Visible = true
                 drawings.TracerTop.From = topScreen
                 drawings.TracerTop.To = targetScreen
                 drawings.TracerTop.Visible = true
             else
                 drawings.TracerTop.Visible = false
-                drawings.TracerTopOutline.Visible = false
             end
 
             -- Bottom Tracer (from bottom center of screen)
             if ESP.TracerBottomEnabled then
                 local screenSize = Camera.ViewportSize
                 local bottomScreen = Vector2.new(screenSize.X / 2, screenSize.Y)
-                drawings.TracerBottomOutline.From = bottomScreen
-                drawings.TracerBottomOutline.To = targetScreen
-                drawings.TracerBottomOutline.Visible = true
                 drawings.TracerBottom.From = bottomScreen
                 drawings.TracerBottom.To = targetScreen
                 drawings.TracerBottom.Visible = true
             else
                 drawings.TracerBottom.Visible = false
-                drawings.TracerBottomOutline.Visible = false
             end
         else
             drawings.TracerLocal.Visible = false
-            drawings.TracerLocalOutline.Visible = false
             drawings.TracerMouse.Visible = false
-            drawings.TracerMouseOutline.Visible = false
             drawings.TracerTop.Visible = false
-            drawings.TracerTopOutline.Visible = false
             drawings.TracerBottom.Visible = false
-            drawings.TracerBottomOutline.Visible = false
         end
     end
 end)
@@ -538,20 +480,16 @@ Players.PlayerRemoving:Connect(function(player)
     if drawings then
         drawings.Box:Remove()
         drawings.BoxOutline:Remove()
-        drawings.BoxFill:Remove()  -- NEW
+        drawings.BoxFill:Remove()
         drawings.NameText:Remove()
         for i = 1, 12 do
             drawings.ThreeDLines[i]:Remove()
             drawings.ThreeDOutlines[i]:Remove()
         end
         drawings.TracerLocal:Remove()
-        drawings.TracerLocalOutline:Remove()
         drawings.TracerMouse:Remove()
-        drawings.TracerMouseOutline:Remove()
         drawings.TracerTop:Remove()
-        drawings.TracerTopOutline:Remove()
         drawings.TracerBottom:Remove()
-        drawings.TracerBottomOutline:Remove()
         ESP.Drawings[player] = nil
     end
 end)
