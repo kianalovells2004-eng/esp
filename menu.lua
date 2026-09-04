@@ -1,5 +1,5 @@
 -- Fetch movement logic (ensure movement.lua is loaded or executed first)
-local Movement = getgenv().MovementModule or loadstring(game:HttpGet("YOUR_MOVEMENT_LUA_URL_HERE"))()
+local Movement = getgenv().MovementModule or loadstring(game:HttpGet("https://raw.githubusercontent.com/kianalovells2004-eng/esp/refs/heads/main/movement.lua"))()
 
 -- Load Pepsi UI Library
 local PepsiLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/pepsi-ui/pepsi/main/library.lua"))()
