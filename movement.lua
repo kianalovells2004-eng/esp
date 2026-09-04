@@ -16,7 +16,7 @@ local Movement = {
     DisabledConnections = {}
 }
 
--- Disables the humanoid jump property signal connections responsible for jump delay
+-- Disables jump property signal connections responsible for jump delay
 local function applyNoJumpCooldown(character)
     if not Movement.NoJumpCooldownEnabled then return end
     local humanoid = character:WaitForChild("Humanoid", 5)
@@ -26,7 +26,6 @@ local function applyNoJumpCooldown(character)
         local signal = humanoid:GetPropertyChangedSignal("Jump")
         local connections = (getconnections and getconnections(signal)) or {}
 
-        -- Wait briefly if client script hasn't bound the signal yet
         local retries = 0
         while #connections == 0 and retries < 20 and Movement.NoJumpCooldownEnabled do
             task.wait(0.1)
@@ -36,26 +35,28 @@ local function applyNoJumpCooldown(character)
 
         if Movement.NoJumpCooldownEnabled then
             for _, conn in ipairs(connections) do
-                conn:Disable()
-                table.insert(Movement.DisabledConnections, conn)
+                if conn.Disable then
+                    conn:Disable()
+                    table.insert(Movement.DisabledConnections, conn)
+                end
             end
         end
     end)
 end
 
--- Re-apply on respawn
+-- Re-apply on character respawn
 LocalPlayer.CharacterAdded:Connect(function(char)
     if Movement.NoJumpCooldownEnabled then
         applyNoJumpCooldown(char)
     end
 end)
 
--- Movement & Auto BHop Loop
+-- Main Loop: Speed, Jump Power, Auto BHop
 RunService.RenderStepped:Connect(function()
     local char = LocalPlayer.Character
     local humanoid = char and char:FindFirstChildOfClass("Humanoid")
 
-    if humanoid then
+    if humanoid and humanoid.Health > 0 then
         if Movement.SpeedEnabled then
             humanoid.WalkSpeed = Movement.SpeedValue
         end
@@ -64,9 +65,13 @@ RunService.RenderStepped:Connect(function()
             humanoid.JumpPower = Movement.JumpValue
         end
 
-        -- Auto BHop: Triggers jump state instantly when touching ground while moving
-        if Movement.AutoBhopEnabled and humanoid.FloorMaterial ~= Enum.Material.Air and humanoid.MoveDirection.Magnitude > 0 then
-            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        -- Auto BHop: Triggers jump state instantly upon touching ground while moving
+        if Movement.AutoBhopEnabled then
+            local state = humanoid:GetState()
+            if (humanoid.FloorMaterial ~= Enum.Material.Air or state == Enum.HumanoidStateType.Landed) and humanoid.MoveDirection.Magnitude > 0 then
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                humanoid.Jump = true
+            end
         end
     end
 end)
@@ -82,7 +87,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Infinite Jump connection
+-- Infinite Jump Connection
 UserInputService.JumpRequest:Connect(function()
     if Movement.InfJumpEnabled then
         local char = LocalPlayer.Character
@@ -93,21 +98,26 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
+-- Setters
 function Movement:SetSpeed(enabled, value)
     self.SpeedEnabled = enabled
     if value then self.SpeedValue = value end
-    if not enabled and LocalPlayer.Character then
-        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then humanoid.WalkSpeed = 16 end
+    
+    local char = LocalPlayer.Character
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    if humanoid and not enabled then
+        humanoid.WalkSpeed = 16
     end
 end
 
 function Movement:SetJump(enabled, value)
     self.JumpEnabled = enabled
     if value then self.JumpValue = value end
-    if not enabled and LocalPlayer.Character then
-        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then humanoid.JumpPower = 50 end
+    
+    local char = LocalPlayer.Character
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    if humanoid and not enabled then
+        humanoid.JumpPower = 50
     end
 end
 
