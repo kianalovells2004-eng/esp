@@ -32,6 +32,12 @@ local function createDrawings(player)
             Filled = false,
             Transparency = 1
         }),
+        BoxOutline = newDrawing("Square", {   -- Black outline behind the main box
+            Color = Color3.fromRGB(0, 0, 0),
+            Thickness = 1.5,
+            Filled = false,
+            Transparency = 1
+        }),
         CornerLines = {},  -- 8 lines for corner boxes
         ThreeDLines = {}   -- 12 lines for 3D box
     }
@@ -63,6 +69,7 @@ function ESP:ToggleBox(state)
     if not state then
         for _, drawings in pairs(self.Drawings) do
             drawings.Box.Visible = false
+            drawings.BoxOutline.Visible = false
         end
     end
 end
@@ -203,6 +210,7 @@ RunService.RenderStepped:Connect(function()
         if not shouldDrawAny then
             -- Hide everything
             drawings.Box.Visible = false
+            drawings.BoxOutline.Visible = false
             for _, line in ipairs(drawings.CornerLines) do line.Visible = false end
             for _, line in ipairs(drawings.ThreeDLines) do line.Visible = false end
             continue
@@ -212,6 +220,7 @@ RunService.RenderStepped:Connect(function()
         local min, max = getCharacterBounds(character)
         if not min or not max then
             drawings.Box.Visible = false
+            drawings.BoxOutline.Visible = false
             for _, line in ipairs(drawings.CornerLines) do line.Visible = false end
             for _, line in ipairs(drawings.ThreeDLines) do line.Visible = false end
             continue
@@ -235,6 +244,7 @@ RunService.RenderStepped:Connect(function()
 
         if not anyOnScreen then
             drawings.Box.Visible = false
+            drawings.BoxOutline.Visible = false
             for _, line in ipairs(drawings.CornerLines) do line.Visible = false end
             for _, line in ipairs(drawings.ThreeDLines) do line.Visible = false end
             continue
@@ -248,14 +258,26 @@ RunService.RenderStepped:Connect(function()
             screenMax = Vector2.new(math.max(screenMax.X, corner.X), math.max(screenMax.Y, corner.Y))
         end
 
-        -- Update Box ESP
+        -- Update Box ESP (with black outline)
         if ESP.BoxEnabled then
             local box = drawings.Box
-            box.Size = Vector2.new(screenMax.X - screenMin.X, screenMax.Y - screenMin.Y)
-            box.Position = screenMin
+            local outline = drawings.BoxOutline
+            local boxSize = Vector2.new(screenMax.X - screenMin.X, screenMax.Y - screenMin.Y)
+            local boxPos = screenMin
+
+            -- Set main box
+            box.Size = boxSize
+            box.Position = boxPos
             box.Visible = true
+
+            -- Set outline box (slightly larger, offset outward)
+            local outlineOffset = 1 -- pixels
+            outline.Size = boxSize + Vector2.new(outlineOffset * 2, outlineOffset * 2)
+            outline.Position = boxPos - Vector2.new(outlineOffset, outlineOffset)
+            outline.Visible = true
         else
             drawings.Box.Visible = false
+            drawings.BoxOutline.Visible = false
         end
 
         -- Update Corner Box ESP (uses the same rectangle)
@@ -282,6 +304,7 @@ Players.PlayerRemoving:Connect(function(player)
     local drawings = ESP.Drawings[player]
     if drawings then
         drawings.Box:Remove()
+        drawings.BoxOutline:Remove()
         for _, line in ipairs(drawings.CornerLines) do line:Remove() end
         for _, line in ipairs(drawings.ThreeDLines) do line:Remove() end
         ESP.Drawings[player] = nil
