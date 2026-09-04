@@ -13,6 +13,7 @@ local ESP = {
     Drawings = {}
 }
 
+-- Helper to create a new drawing object
 local function newDrawing(type, properties)
     local drawing = Drawing.new(type)
     for prop, value in pairs(properties or {}) do
@@ -22,6 +23,7 @@ local function newDrawing(type, properties)
     return drawing
 end
 
+-- Create all drawing objects for a player
 local function createDrawings(player)
     local drawings = {
         Box = newDrawing("Square", {
@@ -32,15 +34,23 @@ local function createDrawings(player)
         }),
         BoxOutline = newDrawing("Square", {
             Color = Color3.fromRGB(0, 0, 0),
-            Thickness = 1.5,
+            Thickness = 3,               -- thicker than main box
             Filled = false,
-            Transparency = 1
+            Transparency = 0.5           -- semi-transparent
         }),
-        CornerLines = {},
-        ThreeDLines = {}
+        CornerLines = {},                -- colored lines
+        CornerOutlines = {},             -- black outline lines
+        ThreeDLines = {},                -- colored lines
+        ThreeDOutlines = {}              -- black outline lines
     }
 
+    -- Corner box: 8 colored lines and 8 outline lines
     for i = 1, 8 do
+        drawings.CornerOutlines[i] = newDrawing("Line", {
+            Color = Color3.fromRGB(0, 0, 0),
+            Thickness = 3.5,             -- thicker than colored (1.5 + 2)
+            Transparency = 0.5
+        })
         drawings.CornerLines[i] = newDrawing("Line", {
             Color = Color3.fromRGB(255, 255, 0),
             Thickness = 1.5,
@@ -48,7 +58,13 @@ local function createDrawings(player)
         })
     end
 
+    -- 3D box: 12 colored lines and 12 outline lines
     for i = 1, 12 do
+        drawings.ThreeDOutlines[i] = newDrawing("Line", {
+            Color = Color3.fromRGB(0, 0, 0),
+            Thickness = 3,               -- thicker than colored (1.2 + 1.8)
+            Transparency = 0.5
+        })
         drawings.ThreeDLines[i] = newDrawing("Line", {
             Color = Color3.fromRGB(0, 150, 255),
             Thickness = 1.2,
@@ -59,6 +75,7 @@ local function createDrawings(player)
     return drawings
 end
 
+-- Toggle functions
 function ESP:ToggleBox(state)
     self.BoxEnabled = state
     if not state then
@@ -73,8 +90,9 @@ function ESP:ToggleCornerBox(state)
     self.CornerBoxEnabled = state
     if not state then
         for _, drawings in pairs(self.Drawings) do
-            for _, line in ipairs(drawings.CornerLines) do
-                line.Visible = false
+            for i = 1, 8 do
+                drawings.CornerLines[i].Visible = false
+                drawings.CornerOutlines[i].Visible = false
             end
         end
     end
@@ -84,8 +102,9 @@ function ESP:Toggle3DBox(state)
     self.ThreeDBoxEnabled = state
     if not state then
         for _, drawings in pairs(self.Drawings) do
-            for _, line in ipairs(drawings.ThreeDLines) do
-                line.Visible = false
+            for i = 1, 12 do
+                drawings.ThreeDLines[i].Visible = false
+                drawings.ThreeDOutlines[i].Visible = false
             end
         end
     end
@@ -98,6 +117,7 @@ function ESP:Toggle(state)
     self:Toggle3DBox(state)
 end
 
+-- Calculate world-space bounding box of character
 local function getCharacterBounds(character)
     local min = Vector3.new(math.huge, math.huge, math.huge)
     local max = Vector3.new(-math.huge, -math.huge, -math.huge)
@@ -131,35 +151,38 @@ local function worldToScreen(worldPos)
     return Vector2.new(screenPos.X, screenPos.Y), onScreen
 end
 
-local function updateCornerLines(lines, topLeft, topRight, bottomLeft, bottomRight)
-    local cornerLength = 8
+-- Update corner box lines with dynamic corner length
+local function updateCornerLines(drawings, topLeft, topRight, bottomLeft, bottomRight)
+    local boxWidth = topRight.X - topLeft.X
+    local boxHeight = bottomLeft.Y - topLeft.Y
+    -- Dynamic corner length: proportional to box size, clamped between 2 and 8 pixels
+    local cornerLength = math.clamp(math.min(boxWidth, boxHeight) * 0.25, 2, 8)
 
-    lines[1].From = topLeft
-    lines[1].To = topLeft + Vector2.new(cornerLength, 0)
-    lines[2].From = topLeft
-    lines[2].To = topLeft + Vector2.new(0, cornerLength)
+    local positions = {
+        {topLeft, topLeft + Vector2.new(cornerLength, 0)},
+        {topLeft, topLeft + Vector2.new(0, cornerLength)},
+        {topRight, topRight - Vector2.new(cornerLength, 0)},
+        {topRight, topRight + Vector2.new(0, cornerLength)},
+        {bottomLeft, bottomLeft + Vector2.new(cornerLength, 0)},
+        {bottomLeft, bottomLeft - Vector2.new(0, cornerLength)},
+        {bottomRight, bottomRight - Vector2.new(cornerLength, 0)},
+        {bottomRight, bottomRight - Vector2.new(0, cornerLength)}
+    }
 
-    lines[3].From = topRight
-    lines[3].To = topRight - Vector2.new(cornerLength, 0)
-    lines[4].From = topRight
-    lines[4].To = topRight + Vector2.new(0, cornerLength)
-
-    lines[5].From = bottomLeft
-    lines[5].To = bottomLeft + Vector2.new(cornerLength, 0)
-    lines[6].From = bottomLeft
-    lines[6].To = bottomLeft - Vector2.new(0, cornerLength)
-
-    lines[7].From = bottomRight
-    lines[7].To = bottomRight - Vector2.new(cornerLength, 0)
-    lines[8].From = bottomRight
-    lines[8].To = bottomRight - Vector2.new(0, cornerLength)
-
-    for _, line in ipairs(lines) do
+    for i = 1, 8 do
+        local outline = drawings.CornerOutlines[i]
+        local line = drawings.CornerLines[i]
+        outline.From = positions[i][1]
+        outline.To = positions[i][2]
+        outline.Visible = true
+        line.From = positions[i][1]
+        line.To = positions[i][2]
         line.Visible = true
     end
 end
 
-local function update3DLines(lines, corners)
+-- Update 3D box lines from 8 projected corners
+local function update3DLines(drawings, corners)
     local edges = {
         {1, 2}, {2, 4}, {4, 3}, {3, 1},
         {5, 6}, {6, 8}, {8, 7}, {7, 5},
@@ -168,9 +191,12 @@ local function update3DLines(lines, corners)
 
     for i, edge in ipairs(edges) do
         local from, to = corners[edge[1]], corners[edge[2]]
-        lines[i].From = from
-        lines[i].To = to
-        lines[i].Visible = true
+        drawings.ThreeDOutlines[i].From = from
+        drawings.ThreeDOutlines[i].To = to
+        drawings.ThreeDOutlines[i].Visible = true
+        drawings.ThreeDLines[i].From = from
+        drawings.ThreeDLines[i].To = to
+        drawings.ThreeDLines[i].Visible = true
     end
 end
 
@@ -192,10 +218,17 @@ RunService.RenderStepped:Connect(function()
         end
 
         if not shouldDrawAny then
+            -- Hide everything
             drawings.Box.Visible = false
             drawings.BoxOutline.Visible = false
-            for _, line in ipairs(drawings.CornerLines) do line.Visible = false end
-            for _, line in ipairs(drawings.ThreeDLines) do line.Visible = false end
+            for i = 1, 8 do
+                drawings.CornerLines[i].Visible = false
+                drawings.CornerOutlines[i].Visible = false
+            end
+            for i = 1, 12 do
+                drawings.ThreeDLines[i].Visible = false
+                drawings.ThreeDOutlines[i].Visible = false
+            end
             continue
         end
 
@@ -203,8 +236,14 @@ RunService.RenderStepped:Connect(function()
         if not min or not max then
             drawings.Box.Visible = false
             drawings.BoxOutline.Visible = false
-            for _, line in ipairs(drawings.CornerLines) do line.Visible = false end
-            for _, line in ipairs(drawings.ThreeDLines) do line.Visible = false end
+            for i = 1, 8 do
+                drawings.CornerLines[i].Visible = false
+                drawings.CornerOutlines[i].Visible = false
+            end
+            for i = 1, 12 do
+                drawings.ThreeDLines[i].Visible = false
+                drawings.ThreeDOutlines[i].Visible = false
+            end
             continue
         end
 
@@ -226,8 +265,14 @@ RunService.RenderStepped:Connect(function()
         if not anyOnScreen then
             drawings.Box.Visible = false
             drawings.BoxOutline.Visible = false
-            for _, line in ipairs(drawings.CornerLines) do line.Visible = false end
-            for _, line in ipairs(drawings.ThreeDLines) do line.Visible = false end
+            for i = 1, 8 do
+                drawings.CornerLines[i].Visible = false
+                drawings.CornerOutlines[i].Visible = false
+            end
+            for i = 1, 12 do
+                drawings.ThreeDLines[i].Visible = false
+                drawings.ThreeDOutlines[i].Visible = false
+            end
             continue
         end
 
@@ -238,10 +283,7 @@ RunService.RenderStepped:Connect(function()
             screenMax = Vector2.new(math.max(screenMax.X, corner.X), math.max(screenMax.Y, corner.Y))
         end
 
-        -- Round screen coordinates to whole pixels for stability
-        screenMin = Vector2.new(math.floor(screenMin.X + 0.5), math.floor(screenMin.Y + 0.5))
-        screenMax = Vector2.new(math.floor(screenMax.X + 0.5), math.floor(screenMax.Y + 0.5))
-
+        -- Box ESP with outline
         if ESP.BoxEnabled then
             local box = drawings.Box
             local outline = drawings.BoxOutline
@@ -261,20 +303,28 @@ RunService.RenderStepped:Connect(function()
             drawings.BoxOutline.Visible = false
         end
 
+        -- Corner Box ESP with dynamic corner length
         if ESP.CornerBoxEnabled then
             local topLeft = screenMin
             local topRight = Vector2.new(screenMax.X, screenMin.Y)
             local bottomLeft = Vector2.new(screenMin.X, screenMax.Y)
             local bottomRight = screenMax
-            updateCornerLines(drawings.CornerLines, topLeft, topRight, bottomLeft, bottomRight)
+            updateCornerLines(drawings, topLeft, topRight, bottomLeft, bottomRight)
         else
-            for _, line in ipairs(drawings.CornerLines) do line.Visible = false end
+            for i = 1, 8 do
+                drawings.CornerLines[i].Visible = false
+                drawings.CornerOutlines[i].Visible = false
+            end
         end
 
+        -- 3D Box ESP
         if ESP.ThreeDBoxEnabled then
-            update3DLines(drawings.ThreeDLines, screenCorners)
+            update3DLines(drawings, screenCorners)
         else
-            for _, line in ipairs(drawings.ThreeDLines) do line.Visible = false end
+            for i = 1, 12 do
+                drawings.ThreeDLines[i].Visible = false
+                drawings.ThreeDOutlines[i].Visible = false
+            end
         end
     end
 end)
@@ -284,8 +334,14 @@ Players.PlayerRemoving:Connect(function(player)
     if drawings then
         drawings.Box:Remove()
         drawings.BoxOutline:Remove()
-        for _, line in ipairs(drawings.CornerLines) do line:Remove() end
-        for _, line in ipairs(drawings.ThreeDLines) do line:Remove() end
+        for i = 1, 8 do
+            drawings.CornerLines[i]:Remove()
+            drawings.CornerOutlines[i]:Remove()
+        end
+        for i = 1, 12 do
+            drawings.ThreeDLines[i]:Remove()
+            drawings.ThreeDOutlines[i]:Remove()
+        end
         ESP.Drawings[player] = nil
     end
 end)
