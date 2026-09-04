@@ -43,6 +43,12 @@ local function createDrawings(player)
             Filled = false,
             Transparency = 0.5
         }),
+        BoxFill = newDrawing("Square", {            -- filled box
+            Color = Color3.fromRGB(255, 255, 255), -- white
+            Thickness = 1,
+            Filled = true,
+            Transparency = 0.6
+        }),
         NameText = newDrawing("Text", {
             Color = Color3.fromRGB(255, 255, 255), -- white
             Size = 14,
@@ -61,7 +67,7 @@ local function createDrawings(player)
         }),
         TracerLocalOutline = newDrawing("Line", {
             Color = Color3.fromRGB(0, 0, 0),        -- black outline
-            Thickness = 0.9,                        -- changed to 0.9
+            Thickness = 0.1,                        -- changed to 0.1
             Transparency = 0.5
         }),
         TracerMouse = newDrawing("Line", {
@@ -71,7 +77,7 @@ local function createDrawings(player)
         }),
         TracerMouseOutline = newDrawing("Line", {
             Color = Color3.fromRGB(0, 0, 0),        -- black outline
-            Thickness = 0.9,                        -- changed to 0.9
+            Thickness = 0.1,                        -- changed to 0.1
             Transparency = 0.5
         }),
         TracerTop = newDrawing("Line", {
@@ -81,7 +87,7 @@ local function createDrawings(player)
         }),
         TracerTopOutline = newDrawing("Line", {
             Color = Color3.fromRGB(0, 0, 0),        -- black outline
-            Thickness = 0.9,                        -- changed to 0.9
+            Thickness = 0.1,                        -- changed to 0.1
             Transparency = 0.5
         }),
         TracerBottom = newDrawing("Line", {
@@ -91,7 +97,7 @@ local function createDrawings(player)
         }),
         TracerBottomOutline = newDrawing("Line", {
             Color = Color3.fromRGB(0, 0, 0),        -- black outline
-            Thickness = 0.9,                        -- changed to 0.9
+            Thickness = 0.1,                        -- changed to 0.1
             Transparency = 0.5
         })
     }
@@ -120,6 +126,7 @@ function ESP:ToggleBox(state)
         for _, drawings in pairs(self.Drawings) do
             drawings.Box.Visible = false
             drawings.BoxOutline.Visible = false
+            drawings.BoxFill.Visible = false
         end
     end
 end
@@ -285,6 +292,7 @@ RunService.RenderStepped:Connect(function()
             -- Hide everything
             drawings.Box.Visible = false
             drawings.BoxOutline.Visible = false
+            drawings.BoxFill.Visible = false
             drawings.NameText.Visible = false
             for i = 1, 12 do
                 drawings.ThreeDLines[i].Visible = false
@@ -307,6 +315,7 @@ RunService.RenderStepped:Connect(function()
             -- Hide all drawings if no valid bounding box
             drawings.Box.Visible = false
             drawings.BoxOutline.Visible = false
+            drawings.BoxFill.Visible = false
             drawings.NameText.Visible = false
             for i = 1, 12 do
                 drawings.ThreeDLines[i].Visible = false
@@ -343,6 +352,7 @@ RunService.RenderStepped:Connect(function()
             -- Target not visible, hide all
             drawings.Box.Visible = false
             drawings.BoxOutline.Visible = false
+            drawings.BoxFill.Visible = false
             drawings.NameText.Visible = false
             for i = 1, 12 do
                 drawings.ThreeDLines[i].Visible = false
@@ -367,10 +377,11 @@ RunService.RenderStepped:Connect(function()
             screenMax = Vector2.new(math.max(screenMax.X, corner.X), math.max(screenMax.Y, corner.Y))
         end
 
-        -- Box ESP
+        -- Box ESP (outline + fill)
         if ESP.BoxEnabled then
             local box = drawings.Box
             local outline = drawings.BoxOutline
+            local fill = drawings.BoxFill
             local boxSize = Vector2.new(screenMax.X - screenMin.X, screenMax.Y - screenMin.Y)
             local boxPos = screenMin
 
@@ -382,9 +393,14 @@ RunService.RenderStepped:Connect(function()
             outline.Size = boxSize + Vector2.new(outlineOffset * 2, outlineOffset * 2)
             outline.Position = boxPos - Vector2.new(outlineOffset, outlineOffset)
             outline.Visible = true
+
+            fill.Size = boxSize
+            fill.Position = boxPos
+            fill.Visible = true
         else
             drawings.Box.Visible = false
             drawings.BoxOutline.Visible = false
+            drawings.BoxFill.Visible = false
         end
 
         -- Name ESP (above the head, no background)
@@ -392,7 +408,6 @@ RunService.RenderStepped:Connect(function()
             local nameText = drawings.NameText
             local name = player.Name
 
-            -- Set text first so TextBounds is updated
             nameText.Text = name
 
             local textSize = Vector2.new(nameText.TextBounds.X, nameText.TextBounds.Y)
@@ -419,10 +434,9 @@ RunService.RenderStepped:Connect(function()
             end
         end
 
-        -- Tracers: get target screen position (use root part center)
+        -- Tracers
         local targetScreen, targetOnScreen = getTargetScreenPos(character)
         if targetScreen and targetOnScreen then
-            -- Local Player Tracer
             if ESP.TracerLocalEnabled then
                 local localChar = LocalPlayer.Character
                 local localRoot = localChar and localChar:FindFirstChild("HumanoidRootPart")
@@ -448,7 +462,6 @@ RunService.RenderStepped:Connect(function()
                 drawings.TracerLocalOutline.Visible = false
             end
 
-            -- Mouse Tracer
             if ESP.TracerMouseEnabled then
                 local mouseScreen = Vector2.new(mousePos.X, mousePos.Y)
                 drawings.TracerMouseOutline.From = mouseScreen
@@ -462,7 +475,6 @@ RunService.RenderStepped:Connect(function()
                 drawings.TracerMouseOutline.Visible = false
             end
 
-            -- Top Tracer (from top center of screen)
             if ESP.TracerTopEnabled then
                 local screenSize = Camera.ViewportSize
                 local topScreen = Vector2.new(screenSize.X / 2, 0)
@@ -477,7 +489,6 @@ RunService.RenderStepped:Connect(function()
                 drawings.TracerTopOutline.Visible = false
             end
 
-            -- Bottom Tracer (from bottom center of screen)
             if ESP.TracerBottomEnabled then
                 local screenSize = Camera.ViewportSize
                 local bottomScreen = Vector2.new(screenSize.X / 2, screenSize.Y)
@@ -509,6 +520,7 @@ Players.PlayerRemoving:Connect(function(player)
     if drawings then
         drawings.Box:Remove()
         drawings.BoxOutline:Remove()
+        drawings.BoxFill:Remove()
         drawings.NameText:Remove()
         for i = 1, 12 do
             drawings.ThreeDLines[i]:Remove()
