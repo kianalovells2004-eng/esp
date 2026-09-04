@@ -10,6 +10,24 @@ section:AddToggle({
     Value = false,
     Flag = "BoxESP",
     Callback = function(value)
-        ESP:Toggle(value)
+        ESP:ToggleBox(value)
+    end
+})
+
+section:AddToggle({
+    Name = "Corner Box ESP",
+    Value = false,
+    Flag = "CornerBoxESP",
+    Callback = function(value)
+        ESP:ToggleCornerBox(value)
+    end
+})
+
+section:AddToggle({
+    Name = "3D Box ESP",
+    Value = false,
+    Flag = "ThreeDBoxESP",
+    Callback = function(value)
+        ESP:Toggle3DBox(value)
     end
 })
