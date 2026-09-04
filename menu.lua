@@ -10,6 +10,60 @@ section:AddToggle({
     Value = false,
     Flag = "BoxESP",
     Callback = function(value)
-        ESP:Toggle(value)
+        ESP:ToggleBox(value)
+    end
+})
+
+section:AddToggle({
+    Name = "Name ESP",
+    Value = false,
+    Flag = "NameESP",
+    Callback = function(value)
+        ESP:ToggleName(value)
+    end
+})
+
+section:AddToggle({
+    Name = "3D Box ESP",
+    Value = false,
+    Flag = "ThreeDBoxESP",
+    Callback = function(value)
+        ESP:Toggle3DBox(value)
+    end
+})
+
+section:AddToggle({
+    Name = "Local Player Tracer",
+    Value = false,
+    Flag = "TracerLocal",
+    Callback = function(value)
+        ESP:ToggleTracerLocal(value)
+    end
+})
+
+section:AddToggle({
+    Name = "Mouse Tracer",
+    Value = false,
+    Flag = "TracerMouse",
+    Callback = function(value)
+        ESP:ToggleTracerMouse(value)
+    end
+})
+
+section:AddToggle({
+    Name = "Top Tracer",
+    Value = false,
+    Flag = "TracerTop",
+    Callback = function(value)
+        ESP:ToggleTracerTop(value)
+    end
+})
+
+section:AddToggle({
+    Name = "Bottom Tracer",
+    Value = false,
+    Flag = "TracerBottom",
+    Callback = function(value)
+        ESP:ToggleTracerBottom(value)
     end
 })
