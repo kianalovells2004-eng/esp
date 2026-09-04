@@ -34,7 +34,7 @@ local function createDrawings(player)
         }),
         BoxOutline = newDrawing("Square", {   -- Black outline behind the main box
             Color = Color3.fromRGB(0, 0, 0),
-            Thickness = 1.5,
+            Thickness = 3,                     -- thicker outline
             Filled = false,
             Transparency = 1
         }),
@@ -271,7 +271,7 @@ RunService.RenderStepped:Connect(function()
             box.Visible = true
 
             -- Set outline box (slightly larger, offset outward)
-            local outlineOffset = 1 -- pixels
+            local outlineOffset = 1.5 -- increased for thicker overlap
             outline.Size = boxSize + Vector2.new(outlineOffset * 2, outlineOffset * 2)
             outline.Position = boxPos - Vector2.new(outlineOffset, outlineOffset)
             outline.Visible = true
