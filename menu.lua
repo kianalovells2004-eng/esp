@@ -15,6 +15,15 @@ section:AddToggle({
 })
 
 section:AddToggle({
+    Name = "2D Box Fill",
+    Value = false,
+    Flag = "BoxFill",
+    Callback = function(value)
+        ESP:ToggleBoxFill(value)
+    end
+})
+
+section:AddToggle({
     Name = "Name ESP",
     Value = false,
     Flag = "NameESP",
@@ -68,11 +77,3 @@ section:AddToggle({
     end
 })
 
-section:AddToggle({
-    Name = "2D Box Fill",
-    Value = false,
-    Flag = "BoxFill",
-    Callback = function(value)
-        ESP:ToggleBoxFill(value)
-    end
-})
