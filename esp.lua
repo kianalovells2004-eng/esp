@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
 
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
@@ -8,8 +9,12 @@ local Camera = Workspace.CurrentCamera
 local ESP = {
     Enabled = false,
     BoxEnabled = false,
-    CornerBoxEnabled = false,
+    NameEnabled = false,
     ThreeDBoxEnabled = false,
+    TracerLocalEnabled = false,
+    TracerMouseEnabled = false,
+    TracerTopEnabled = false,
+    TracerBottomEnabled = false,
     Drawings = {}
 }
 
@@ -34,35 +39,53 @@ local function createDrawings(player)
         }),
         BoxOutline = newDrawing("Square", {
             Color = Color3.fromRGB(0, 0, 0),
-            Thickness = 3,               -- thicker than main box
+            Thickness = 3,
             Filled = false,
-            Transparency = 0.5           -- semi-transparent
-        }),
-        CornerLines = {},                -- colored lines
-        CornerOutlines = {},             -- black outline lines
-        ThreeDLines = {},                -- colored lines
-        ThreeDOutlines = {}              -- black outline lines
-    }
-
-    -- Corner box: 8 colored lines and 8 outline lines
-    for i = 1, 8 do
-        drawings.CornerOutlines[i] = newDrawing("Line", {
-            Color = Color3.fromRGB(0, 0, 0),
-            Thickness = 3.5,             -- thicker than colored (1.5 + 2)
             Transparency = 0.5
-        })
-        drawings.CornerLines[i] = newDrawing("Line", {
+        }),
+        NameBackground = newDrawing("Square", {
+            Color = Color3.fromRGB(200, 200, 200), -- light grey
+            Thickness = 1,
+            Filled = true,
+            Transparency = 0.5
+        }),
+        NameText = newDrawing("Text", {
+            Color = Color3.fromRGB(255, 255, 255),
+            Size = 14,
+            Center = true,
+            Outline = true,
+            OutlineColor = Color3.fromRGB(0, 0, 0),
+            Transparency = 1
+        }),
+        ThreeDLines = {},
+        ThreeDOutlines = {},
+        TracerLocal = newDrawing("Line", {
+            Color = Color3.fromRGB(255, 0, 0),
+            Thickness = 1,
+            Transparency = 1
+        }),
+        TracerMouse = newDrawing("Line", {
+            Color = Color3.fromRGB(0, 255, 255),
+            Thickness = 1,
+            Transparency = 1
+        }),
+        TracerTop = newDrawing("Line", {
             Color = Color3.fromRGB(255, 255, 0),
-            Thickness = 1.5,
+            Thickness = 1,
+            Transparency = 1
+        }),
+        TracerBottom = newDrawing("Line", {
+            Color = Color3.fromRGB(255, 0, 255),
+            Thickness = 1,
             Transparency = 1
         })
-    end
+    }
 
-    -- 3D box: 12 colored lines and 12 outline lines
+    -- 3D box lines (12 colored + 12 outlines)
     for i = 1, 12 do
         drawings.ThreeDOutlines[i] = newDrawing("Line", {
             Color = Color3.fromRGB(0, 0, 0),
-            Thickness = 3,               -- thicker than colored (1.2 + 1.8)
+            Thickness = 3,
             Transparency = 0.5
         })
         drawings.ThreeDLines[i] = newDrawing("Line", {
@@ -86,14 +109,12 @@ function ESP:ToggleBox(state)
     end
 end
 
-function ESP:ToggleCornerBox(state)
-    self.CornerBoxEnabled = state
+function ESP:ToggleName(state)
+    self.NameEnabled = state
     if not state then
         for _, drawings in pairs(self.Drawings) do
-            for i = 1, 8 do
-                drawings.CornerLines[i].Visible = false
-                drawings.CornerOutlines[i].Visible = false
-            end
+            drawings.NameText.Visible = false
+            drawings.NameBackground.Visible = false
         end
     end
 end
@@ -110,11 +131,52 @@ function ESP:Toggle3DBox(state)
     end
 end
 
+function ESP:ToggleTracerLocal(state)
+    self.TracerLocalEnabled = state
+    if not state then
+        for _, drawings in pairs(self.Drawings) do
+            drawings.TracerLocal.Visible = false
+        end
+    end
+end
+
+function ESP:ToggleTracerMouse(state)
+    self.TracerMouseEnabled = state
+    if not state then
+        for _, drawings in pairs(self.Drawings) do
+            drawings.TracerMouse.Visible = false
+        end
+    end
+end
+
+function ESP:ToggleTracerTop(state)
+    self.TracerTopEnabled = state
+    if not state then
+        for _, drawings in pairs(self.Drawings) do
+            drawings.TracerTop.Visible = false
+        end
+    end
+end
+
+function ESP:ToggleTracerBottom(state)
+    self.TracerBottomEnabled = state
+    if not state then
+        for _, drawings in pairs(self.Drawings) do
+            drawings.TracerBottom.Visible = false
+        end
+    end
+end
+
+-- Master toggle (keeps compatibility)
 function ESP:Toggle(state)
     self.Enabled = state
     self:ToggleBox(state)
-    self:ToggleCornerBox(state)
+    self:ToggleName(state)
     self:Toggle3DBox(state)
+    self:ToggleTracerLocal(state)
+    self:ToggleTracerMouse(state)
+    self:ToggleTracerTop(state)
+    self:ToggleTracerBottom(state)
 end
 
 -- Calculate world-space bounding box of character
@@ -151,36 +213,6 @@ local function worldToScreen(worldPos)
     return Vector2.new(screenPos.X, screenPos.Y), onScreen
 end
 
--- Update corner box lines with dynamic corner length
-local function updateCornerLines(drawings, topLeft, topRight, bottomLeft, bottomRight)
-    local boxWidth = topRight.X - topLeft.X
-    local boxHeight = bottomLeft.Y - topLeft.Y
-    -- Dynamic corner length: proportional to box size, clamped between 2 and 8 pixels
-    local cornerLength = math.clamp(math.min(boxWidth, boxHeight) * 0.25, 2, 8)
-
-    local positions = {
-        {topLeft, topLeft + Vector2.new(cornerLength, 0)},
-        {topLeft, topLeft + Vector2.new(0, cornerLength)},
-        {topRight, topRight - Vector2.new(cornerLength, 0)},
-        {topRight, topRight + Vector2.new(0, cornerLength)},
-        {bottomLeft, bottomLeft + Vector2.new(cornerLength, 0)},
-        {bottomLeft, bottomLeft - Vector2.new(0, cornerLength)},
-        {bottomRight, bottomRight - Vector2.new(cornerLength, 0)},
-        {bottomRight, bottomRight - Vector2.new(0, cornerLength)}
-    }
-
-    for i = 1, 8 do
-        local outline = drawings.CornerOutlines[i]
-        local line = drawings.CornerLines[i]
-        outline.From = positions[i][1]
-        outline.To = positions[i][2]
-        outline.Visible = true
-        line.From = positions[i][1]
-        line.To = positions[i][2]
-        line.Visible = true
-    end
-end
-
 -- Update 3D box lines from 8 projected corners
 local function update3DLines(drawings, corners)
     local edges = {
@@ -200,7 +232,18 @@ local function update3DLines(drawings, corners)
     end
 end
 
+-- Helper to get target's root part screen position (and on-screen flag)
+local function getTargetScreenPos(character)
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return nil, false end
+    local screenPos, onScreen = worldToScreen(rootPart.Position)
+    return screenPos, onScreen
+end
+
+-- Main render loop
 RunService.RenderStepped:Connect(function()
+    local mousePos = UserInputService:GetMouseLocation()
+
     for _, player in ipairs(Players:GetPlayers()) do
         if player == LocalPlayer then continue end
 
@@ -209,8 +252,11 @@ RunService.RenderStepped:Connect(function()
         local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 
         local isValid = character and humanoid and humanoid.Health > 0 and rootPart
-        local shouldDrawAny = (ESP.BoxEnabled or ESP.CornerBoxEnabled or ESP.ThreeDBoxEnabled) and isValid
+        local shouldDrawAny = (ESP.BoxEnabled or ESP.NameEnabled or ESP.ThreeDBoxEnabled
+            or ESP.TracerLocalEnabled or ESP.TracerMouseEnabled
+            or ESP.TracerTopEnabled or ESP.TracerBottomEnabled) and isValid
 
+        -- Get or create drawings for this player
         local drawings = ESP.Drawings[player]
         if not drawings then
             drawings = createDrawings(player)
@@ -221,32 +267,39 @@ RunService.RenderStepped:Connect(function()
             -- Hide everything
             drawings.Box.Visible = false
             drawings.BoxOutline.Visible = false
-            for i = 1, 8 do
-                drawings.CornerLines[i].Visible = false
-                drawings.CornerOutlines[i].Visible = false
-            end
+            drawings.NameText.Visible = false
+            drawings.NameBackground.Visible = false
             for i = 1, 12 do
                 drawings.ThreeDLines[i].Visible = false
                 drawings.ThreeDOutlines[i].Visible = false
             end
+            drawings.TracerLocal.Visible = false
+            drawings.TracerMouse.Visible = false
+            drawings.TracerTop.Visible = false
+            drawings.TracerBottom.Visible = false
             continue
         end
 
+        -- Get bounding box
         local min, max = getCharacterBounds(character)
         if not min or not max then
+            -- Hide all drawings if no valid bounding box
             drawings.Box.Visible = false
             drawings.BoxOutline.Visible = false
-            for i = 1, 8 do
-                drawings.CornerLines[i].Visible = false
-                drawings.CornerOutlines[i].Visible = false
-            end
+            drawings.NameText.Visible = false
+            drawings.NameBackground.Visible = false
             for i = 1, 12 do
                 drawings.ThreeDLines[i].Visible = false
                 drawings.ThreeDOutlines[i].Visible = false
             end
+            drawings.TracerLocal.Visible = false
+            drawings.TracerMouse.Visible = false
+            drawings.TracerTop.Visible = false
+            drawings.TracerBottom.Visible = false
             continue
         end
 
+        -- Project all 8 corners of the 3D bounding box
         local corners3D = {
             Vector3.new(min.X, min.Y, min.Z), Vector3.new(min.X, min.Y, max.Z),
             Vector3.new(min.X, max.Y, min.Z), Vector3.new(min.X, max.Y, max.Z),
@@ -263,19 +316,23 @@ RunService.RenderStepped:Connect(function()
         end
 
         if not anyOnScreen then
+            -- Target not visible, hide all
             drawings.Box.Visible = false
             drawings.BoxOutline.Visible = false
-            for i = 1, 8 do
-                drawings.CornerLines[i].Visible = false
-                drawings.CornerOutlines[i].Visible = false
-            end
+            drawings.NameText.Visible = false
+            drawings.NameBackground.Visible = false
             for i = 1, 12 do
                 drawings.ThreeDLines[i].Visible = false
                 drawings.ThreeDOutlines[i].Visible = false
             end
+            drawings.TracerLocal.Visible = false
+            drawings.TracerMouse.Visible = false
+            drawings.TracerTop.Visible = false
+            drawings.TracerBottom.Visible = false
             continue
         end
 
+        -- Calculate screen-space bounding rectangle
         local screenMin = Vector2.new(math.huge, math.huge)
         local screenMax = Vector2.new(-math.huge, -math.huge)
         for _, corner in ipairs(screenCorners) do
@@ -283,7 +340,7 @@ RunService.RenderStepped:Connect(function()
             screenMax = Vector2.new(math.max(screenMax.X, corner.X), math.max(screenMax.Y, corner.Y))
         end
 
-        -- Box ESP with outline
+        -- Box ESP
         if ESP.BoxEnabled then
             local box = drawings.Box
             local outline = drawings.BoxOutline
@@ -303,18 +360,31 @@ RunService.RenderStepped:Connect(function()
             drawings.BoxOutline.Visible = false
         end
 
-        -- Corner Box ESP with dynamic corner length
-        if ESP.CornerBoxEnabled then
-            local topLeft = screenMin
-            local topRight = Vector2.new(screenMax.X, screenMin.Y)
-            local bottomLeft = Vector2.new(screenMin.X, screenMax.Y)
-            local bottomRight = screenMax
-            updateCornerLines(drawings, topLeft, topRight, bottomLeft, bottomRight)
+        -- Name ESP
+        if ESP.NameEnabled then
+            local nameText = drawings.NameText
+            local nameBg = drawings.NameBackground
+            local name = player.Name
+
+            -- Position name above the box
+            local textSize = Vector2.new(nameText.TextBounds.X, nameText.TextBounds.Y)
+            local textPos = Vector2.new(
+                (screenMin.X + screenMax.X) / 2,
+                screenMin.Y - 20 -- above box
+            )
+
+            nameText.Text = name
+            nameText.Position = textPos
+            nameText.Visible = true
+
+            -- Background rectangle
+            local padding = 4
+            nameBg.Size = Vector2.new(textSize.X + padding * 2, textSize.Y + padding * 2)
+            nameBg.Position = textPos - Vector2.new(textSize.X / 2 + padding, textSize.Y / 2 + padding)
+            nameBg.Visible = true
         else
-            for i = 1, 8 do
-                drawings.CornerLines[i].Visible = false
-                drawings.CornerOutlines[i].Visible = false
-            end
+            drawings.NameText.Visible = false
+            drawings.NameBackground.Visible = false
         end
 
         -- 3D Box ESP
@@ -326,6 +396,64 @@ RunService.RenderStepped:Connect(function()
                 drawings.ThreeDOutlines[i].Visible = false
             end
         end
+
+        -- Tracers: get target screen position (use root part center)
+        local targetScreen, targetOnScreen = getTargetScreenPos(character)
+        if targetScreen and targetOnScreen then
+            -- Local Player Tracer
+            if ESP.TracerLocalEnabled then
+                local localChar = LocalPlayer.Character
+                local localRoot = localChar and localChar:FindFirstChild("HumanoidRootPart")
+                if localRoot then
+                    local localScreen, localOnScreen = worldToScreen(localRoot.Position)
+                    if localScreen then
+                        drawings.TracerLocal.From = localScreen
+                        drawings.TracerLocal.To = targetScreen
+                        drawings.TracerLocal.Visible = true
+                    else
+                        drawings.TracerLocal.Visible = false
+                    end
+                else
+                    drawings.TracerLocal.Visible = false
+                end
+            else
+                drawings.TracerLocal.Visible = false
+            end
+
+            -- Mouse Tracer
+            if ESP.TracerMouseEnabled then
+                drawings.TracerMouse.From = Vector2.new(mousePos.X, mousePos.Y)
+                drawings.TracerMouse.To = targetScreen
+                drawings.TracerMouse.Visible = true
+            else
+                drawings.TracerMouse.Visible = false
+            end
+
+            -- Top Tracer (from top center of screen)
+            if ESP.TracerTopEnabled then
+                local screenSize = Camera.ViewportSize
+                drawings.TracerTop.From = Vector2.new(screenSize.X / 2, 0)
+                drawings.TracerTop.To = targetScreen
+                drawings.TracerTop.Visible = true
+            else
+                drawings.TracerTop.Visible = false
+            end
+
+            -- Bottom Tracer (from bottom center of screen)
+            if ESP.TracerBottomEnabled then
+                local screenSize = Camera.ViewportSize
+                drawings.TracerBottom.From = Vector2.new(screenSize.X / 2, screenSize.Y)
+                drawings.TracerBottom.To = targetScreen
+                drawings.TracerBottom.Visible = true
+            else
+                drawings.TracerBottom.Visible = false
+            end
+        else
+            drawings.TracerLocal.Visible = false
+            drawings.TracerMouse.Visible = false
+            drawings.TracerTop.Visible = false
+            drawings.TracerBottom.Visible = false
+        end
     end
 end)
 
@@ -334,14 +462,16 @@ Players.PlayerRemoving:Connect(function(player)
     if drawings then
         drawings.Box:Remove()
         drawings.BoxOutline:Remove()
-        for i = 1, 8 do
-            drawings.CornerLines[i]:Remove()
-            drawings.CornerOutlines[i]:Remove()
-        end
+        drawings.NameText:Remove()
+        drawings.NameBackground:Remove()
         for i = 1, 12 do
             drawings.ThreeDLines[i]:Remove()
             drawings.ThreeDOutlines[i]:Remove()
         end
+        drawings.TracerLocal:Remove()
+        drawings.TracerMouse:Remove()
+        drawings.TracerTop:Remove()
+        drawings.TracerBottom:Remove()
         ESP.Drawings[player] = nil
     end
 end)
