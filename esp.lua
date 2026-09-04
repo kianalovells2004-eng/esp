@@ -6,14 +6,13 @@ local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
 local ESP = {
-    Enabled = false,          -- master switch (toggles all)
-    BoxEnabled = false,       -- basic rectangle
-    CornerBoxEnabled = false, -- corner boxes
-    ThreeDBoxEnabled = false, -- 3D wireframe box
-    Drawings = {}             -- stores all drawing objects per player
+    Enabled = false,
+    BoxEnabled = false,
+    CornerBoxEnabled = false,
+    ThreeDBoxEnabled = false,
+    Drawings = {}
 }
 
--- Helper to create a new drawing object
 local function newDrawing(type, properties)
     local drawing = Drawing.new(type)
     for prop, value in pairs(properties or {}) do
@@ -23,7 +22,6 @@ local function newDrawing(type, properties)
     return drawing
 end
 
--- Create all drawing objects for a player (box, corner lines, 3D lines)
 local function createDrawings(player)
     local drawings = {
         Box = newDrawing("Square", {
@@ -32,17 +30,16 @@ local function createDrawings(player)
             Filled = false,
             Transparency = 1
         }),
-        BoxOutline = newDrawing("Square", {   -- Black outline behind the main box
+        BoxOutline = newDrawing("Square", {
             Color = Color3.fromRGB(0, 0, 0),
-            Thickness = 3,                     -- thicker outline
+            Thickness = 1.5,
             Filled = false,
             Transparency = 1
         }),
-        CornerLines = {},  -- 8 lines for corner boxes
-        ThreeDLines = {}   -- 12 lines for 3D box
+        CornerLines = {},
+        ThreeDLines = {}
     }
 
-    -- Create 8 lines for corner boxes (two per corner)
     for i = 1, 8 do
         drawings.CornerLines[i] = newDrawing("Line", {
             Color = Color3.fromRGB(255, 255, 0),
@@ -51,7 +48,6 @@ local function createDrawings(player)
         })
     end
 
-    -- Create 12 lines for 3D box edges
     for i = 1, 12 do
         drawings.ThreeDLines[i] = newDrawing("Line", {
             Color = Color3.fromRGB(0, 150, 255),
@@ -63,7 +59,6 @@ local function createDrawings(player)
     return drawings
 end
 
--- Toggle functions for each ESP type
 function ESP:ToggleBox(state)
     self.BoxEnabled = state
     if not state then
@@ -96,7 +91,6 @@ function ESP:Toggle3DBox(state)
     end
 end
 
--- Master toggle (keeps compatibility with original)
 function ESP:Toggle(state)
     self.Enabled = state
     self:ToggleBox(state)
@@ -104,7 +98,6 @@ function ESP:Toggle(state)
     self:Toggle3DBox(state)
 end
 
--- Calculate world-space bounding box of character
 local function getCharacterBounds(character)
     local min = Vector3.new(math.huge, math.huge, math.huge)
     local max = Vector3.new(-math.huge, -math.huge, -math.huge)
@@ -133,35 +126,29 @@ local function getCharacterBounds(character)
     return min, max
 end
 
--- Project a world position to screen
 local function worldToScreen(worldPos)
     local screenPos, onScreen = Camera:WorldToViewportPoint(worldPos)
     return Vector2.new(screenPos.X, screenPos.Y), onScreen
 end
 
--- Update corner box lines given screen positions of the 4 corners of the rectangle
 local function updateCornerLines(lines, topLeft, topRight, bottomLeft, bottomRight)
-    local cornerLength = 8  -- length of each corner segment
+    local cornerLength = 8
 
-    -- Top-left corner
     lines[1].From = topLeft
     lines[1].To = topLeft + Vector2.new(cornerLength, 0)
     lines[2].From = topLeft
     lines[2].To = topLeft + Vector2.new(0, cornerLength)
 
-    -- Top-right corner
     lines[3].From = topRight
     lines[3].To = topRight - Vector2.new(cornerLength, 0)
     lines[4].From = topRight
     lines[4].To = topRight + Vector2.new(0, cornerLength)
 
-    -- Bottom-left corner
     lines[5].From = bottomLeft
     lines[5].To = bottomLeft + Vector2.new(cornerLength, 0)
     lines[6].From = bottomLeft
     lines[6].To = bottomLeft - Vector2.new(0, cornerLength)
 
-    -- Bottom-right corner
     lines[7].From = bottomRight
     lines[7].To = bottomRight - Vector2.new(cornerLength, 0)
     lines[8].From = bottomRight
@@ -172,13 +159,11 @@ local function updateCornerLines(lines, topLeft, topRight, bottomLeft, bottomRig
     end
 end
 
--- Update 3D box lines from 8 projected corners
 local function update3DLines(lines, corners)
-    -- Define the 12 edges connecting the corners
     local edges = {
-        {1, 2}, {2, 4}, {4, 3}, {3, 1},  -- bottom face
-        {5, 6}, {6, 8}, {8, 7}, {7, 5},  -- top face
-        {1, 5}, {2, 6}, {3, 7}, {4, 8}   -- vertical edges
+        {1, 2}, {2, 4}, {4, 3}, {3, 1},
+        {5, 6}, {6, 8}, {8, 7}, {7, 5},
+        {1, 5}, {2, 6}, {3, 7}, {4, 8}
     }
 
     for i, edge in ipairs(edges) do
@@ -200,7 +185,6 @@ RunService.RenderStepped:Connect(function()
         local isValid = character and humanoid and humanoid.Health > 0 and rootPart
         local shouldDrawAny = (ESP.BoxEnabled or ESP.CornerBoxEnabled or ESP.ThreeDBoxEnabled) and isValid
 
-        -- Get or create drawings for this player
         local drawings = ESP.Drawings[player]
         if not drawings then
             drawings = createDrawings(player)
@@ -208,7 +192,6 @@ RunService.RenderStepped:Connect(function()
         end
 
         if not shouldDrawAny then
-            -- Hide everything
             drawings.Box.Visible = false
             drawings.BoxOutline.Visible = false
             for _, line in ipairs(drawings.CornerLines) do line.Visible = false end
@@ -216,7 +199,6 @@ RunService.RenderStepped:Connect(function()
             continue
         end
 
-        -- Get bounding box
         local min, max = getCharacterBounds(character)
         if not min or not max then
             drawings.Box.Visible = false
@@ -226,7 +208,6 @@ RunService.RenderStepped:Connect(function()
             continue
         end
 
-        -- Project all 8 corners of the 3D bounding box
         local corners3D = {
             Vector3.new(min.X, min.Y, min.Z), Vector3.new(min.X, min.Y, max.Z),
             Vector3.new(min.X, max.Y, min.Z), Vector3.new(min.X, max.Y, max.Z),
@@ -250,7 +231,6 @@ RunService.RenderStepped:Connect(function()
             continue
         end
 
-        -- Calculate screen-space bounding rectangle from corners
         local screenMin = Vector2.new(math.huge, math.huge)
         local screenMax = Vector2.new(-math.huge, -math.huge)
         for _, corner in ipairs(screenCorners) do
@@ -258,20 +238,21 @@ RunService.RenderStepped:Connect(function()
             screenMax = Vector2.new(math.max(screenMax.X, corner.X), math.max(screenMax.Y, corner.Y))
         end
 
-        -- Update Box ESP (with black outline)
+        -- Round screen coordinates to whole pixels for stability
+        screenMin = Vector2.new(math.floor(screenMin.X + 0.5), math.floor(screenMin.Y + 0.5))
+        screenMax = Vector2.new(math.floor(screenMax.X + 0.5), math.floor(screenMax.Y + 0.5))
+
         if ESP.BoxEnabled then
             local box = drawings.Box
             local outline = drawings.BoxOutline
             local boxSize = Vector2.new(screenMax.X - screenMin.X, screenMax.Y - screenMin.Y)
             local boxPos = screenMin
 
-            -- Set main box
             box.Size = boxSize
             box.Position = boxPos
             box.Visible = true
 
-            -- Set outline box (slightly larger, offset outward)
-            local outlineOffset = 1.5 -- increased for thicker overlap
+            local outlineOffset = 1
             outline.Size = boxSize + Vector2.new(outlineOffset * 2, outlineOffset * 2)
             outline.Position = boxPos - Vector2.new(outlineOffset, outlineOffset)
             outline.Visible = true
@@ -280,7 +261,6 @@ RunService.RenderStepped:Connect(function()
             drawings.BoxOutline.Visible = false
         end
 
-        -- Update Corner Box ESP (uses the same rectangle)
         if ESP.CornerBoxEnabled then
             local topLeft = screenMin
             local topRight = Vector2.new(screenMax.X, screenMin.Y)
@@ -291,7 +271,6 @@ RunService.RenderStepped:Connect(function()
             for _, line in ipairs(drawings.CornerLines) do line.Visible = false end
         end
 
-        -- Update 3D Box ESP
         if ESP.ThreeDBoxEnabled then
             update3DLines(drawings.ThreeDLines, screenCorners)
         else
