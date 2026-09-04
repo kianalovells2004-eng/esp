@@ -32,14 +32,14 @@ end
 local function createDrawings(player)
     local drawings = {
         Box = newDrawing("Square", {
-            Color = Color3.fromRGB(0, 255, 0),
+            Color = Color3.fromRGB(255, 255, 255), -- white
             Thickness = 1.5,
             Filled = false,
             Transparency = 1
         }),
         BoxOutline = newDrawing("Square", {
-            Color = Color3.fromRGB(0, 0, 0),
-            Thickness = 2.5,  -- reduced from 3 by 0.5
+            Color = Color3.fromRGB(0, 0, 0),        -- black outline
+            Thickness = 1.2,                        -- thinner
             Filled = false,
             Transparency = 0.5
         }),
@@ -50,7 +50,7 @@ local function createDrawings(player)
             Transparency = 0.5
         }),
         NameText = newDrawing("Text", {
-            Color = Color3.fromRGB(255, 255, 255),
+            Color = Color3.fromRGB(255, 255, 255), -- white
             Size = 14,
             Center = true,
             Outline = true,
@@ -61,22 +61,22 @@ local function createDrawings(player)
         ThreeDLines = {},
         ThreeDOutlines = {},
         TracerLocal = newDrawing("Line", {
-            Color = Color3.fromRGB(255, 0, 0),
+            Color = Color3.fromRGB(255, 255, 255), -- white
             Thickness = 1,
             Transparency = 1
         }),
         TracerMouse = newDrawing("Line", {
-            Color = Color3.fromRGB(0, 255, 255),
+            Color = Color3.fromRGB(255, 255, 255), -- white
             Thickness = 1,
             Transparency = 1
         }),
         TracerTop = newDrawing("Line", {
-            Color = Color3.fromRGB(255, 255, 0),
+            Color = Color3.fromRGB(255, 255, 255), -- white
             Thickness = 1,
             Transparency = 1
         }),
         TracerBottom = newDrawing("Line", {
-            Color = Color3.fromRGB(255, 0, 255),
+            Color = Color3.fromRGB(255, 255, 255), -- white
             Thickness = 1,
             Transparency = 1
         })
@@ -85,12 +85,12 @@ local function createDrawings(player)
     -- 3D box lines (12 colored + 12 outlines)
     for i = 1, 12 do
         drawings.ThreeDOutlines[i] = newDrawing("Line", {
-            Color = Color3.fromRGB(0, 0, 0),
-            Thickness = 2.5,  -- reduced from 3 by 0.5
+            Color = Color3.fromRGB(0, 0, 0),        -- black outline
+            Thickness = 1.2,                        -- thinner
             Transparency = 0.5
         })
         drawings.ThreeDLines[i] = newDrawing("Line", {
-            Color = Color3.fromRGB(0, 150, 255),
+            Color = Color3.fromRGB(255, 255, 255), -- white
             Thickness = 1.2,
             Transparency = 1
         })
@@ -211,8 +211,7 @@ end
 
 local function worldToScreen(worldPos)
     local screenPos, onScreen = Camera:WorldToViewportPoint(worldPos)
-    -- Round to whole pixels for static rendering
-    return Vector2.new(math.floor(screenPos.X + 0.5), math.floor(screenPos.Y + 0.5)), onScreen
+    return Vector2.new(screenPos.X, screenPos.Y), onScreen
 end
 
 -- Update 3D box lines from 8 projected corners
@@ -342,10 +341,6 @@ RunService.RenderStepped:Connect(function()
             screenMax = Vector2.new(math.max(screenMax.X, corner.X), math.max(screenMax.Y, corner.Y))
         end
 
-        -- Round to whole pixels for box position/size
-        screenMin = Vector2.new(math.floor(screenMin.X), math.floor(screenMin.Y))
-        screenMax = Vector2.new(math.floor(screenMax.X), math.floor(screenMax.Y))
-
         -- Box ESP
         if ESP.BoxEnabled then
             local box = drawings.Box
@@ -381,16 +376,16 @@ RunService.RenderStepped:Connect(function()
             -- Position text just above the top of the bounding box with a small gap
             local gap = 5
             local textPos = Vector2.new(
-                math.floor((screenMin.X + screenMax.X) / 2),
-                math.floor(screenMin.Y - gap - textSize.Y / 2 - padding)
+                (screenMin.X + screenMax.X) / 2,
+                screenMin.Y - gap - textSize.Y / 2 - padding
             )
 
             nameText.Position = textPos
             nameText.Visible = true
 
             -- Background rectangle centered on the text
-            nameBg.Size = Vector2.new(math.floor(textSize.X + padding * 2), math.floor(textSize.Y + padding * 2))
-            nameBg.Position = Vector2.new(math.floor(textPos.X - nameBg.Size.X / 2), math.floor(textPos.Y - nameBg.Size.Y / 2))
+            nameBg.Size = textSize + Vector2.new(padding * 2, padding * 2)
+            nameBg.Position = textPos - nameBg.Size / 2
             nameBg.Visible = true
         else
             drawings.NameText.Visible = false
@@ -432,7 +427,7 @@ RunService.RenderStepped:Connect(function()
 
             -- Mouse Tracer
             if ESP.TracerMouseEnabled then
-                drawings.TracerMouse.From = Vector2.new(math.floor(mousePos.X), math.floor(mousePos.Y))
+                drawings.TracerMouse.From = Vector2.new(mousePos.X, mousePos.Y)
                 drawings.TracerMouse.To = targetScreen
                 drawings.TracerMouse.Visible = true
             else
@@ -442,7 +437,7 @@ RunService.RenderStepped:Connect(function()
             -- Top Tracer (from top center of screen)
             if ESP.TracerTopEnabled then
                 local screenSize = Camera.ViewportSize
-                drawings.TracerTop.From = Vector2.new(math.floor(screenSize.X / 2), 0)
+                drawings.TracerTop.From = Vector2.new(screenSize.X / 2, 0)
                 drawings.TracerTop.To = targetScreen
                 drawings.TracerTop.Visible = true
             else
@@ -452,7 +447,7 @@ RunService.RenderStepped:Connect(function()
             -- Bottom Tracer (from bottom center of screen)
             if ESP.TracerBottomEnabled then
                 local screenSize = Camera.ViewportSize
-                drawings.TracerBottom.From = Vector2.new(math.floor(screenSize.X / 2), math.floor(screenSize.Y))
+                drawings.TracerBottom.From = Vector2.new(screenSize.X / 2, screenSize.Y)
                 drawings.TracerBottom.To = targetScreen
                 drawings.TracerBottom.Visible = true
             else
