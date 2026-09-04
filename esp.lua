@@ -19,7 +19,7 @@ local ESP = {
     Drawings = {}
 }
 
--- Helper to create a new drawing object
+--helpers $$
 local function newDrawing(type, properties)
     local drawing = Drawing.new(type)
     for prop, value in pairs(properties or {}) do
@@ -29,7 +29,7 @@ local function newDrawing(type, properties)
     return drawing
 end
 
--- Create all drawing objects for a player
+-- drawing objects
 local function createDrawings(player)
     local drawings = {
         Box = newDrawing("Square", {
@@ -83,7 +83,7 @@ local function createDrawings(player)
         })
     }
 
-    -- 3D box lines (12 colored + 12 outlines)
+    -- $$
     for i = 1, 12 do
         drawings.ThreeDOutlines[i] = newDrawing("Line", {
             Color = Color3.fromRGB(0, 0, 0),
@@ -190,7 +190,7 @@ function ESP:Toggle(state)
     self:ToggleTracerBottom(state)
 end
 
--- Calculate world-space bounding box of character
+
 local function getCharacterBounds(character)
     local min = Vector3.new(math.huge, math.huge, math.huge)
     local max = Vector3.new(-math.huge, -math.huge, -math.huge)
@@ -223,8 +223,7 @@ local function worldToScreen(worldPos)
     local screenPos, onScreen = Camera:WorldToViewportPoint(worldPos)
     return Vector2.new(screenPos.X, screenPos.Y), onScreen
 end
-
--- Update 3D box lines from 8 projected corners
+-- math :smirk:
 local function update3DLines(drawings, corners)
     local edges = {
         {1, 2}, {2, 4}, {4, 3}, {3, 1},
@@ -243,7 +242,7 @@ local function update3DLines(drawings, corners)
     end
 end
 
--- Helper to get target's root part screen position
+-- idk 
 local function getTargetScreenPos(character)
     local rootPart = character:FindFirstChild("HumanoidRootPart")
     if not rootPart then return nil, false end
@@ -251,7 +250,7 @@ local function getTargetScreenPos(character)
     return screenPos, onScreen
 end
 
--- Main render loop
+-- optimized render loop 
 RunService.RenderStepped:Connect(function()
     local mousePos = UserInputService:GetMouseLocation()
 
@@ -344,7 +343,7 @@ RunService.RenderStepped:Connect(function()
             screenMax = Vector2.new(math.max(screenMax.X, corner.X), math.max(screenMax.Y, corner.Y))
         end
 
-        -- Box ESP (outline only)
+       -- box esp
         if ESP.BoxEnabled then
             local box = drawings.Box
             local outline = drawings.BoxOutline
@@ -374,7 +373,7 @@ RunService.RenderStepped:Connect(function()
             drawings.BoxFill.Visible = false
         end
 
-        -- Name ESP (above the head)
+        -- name esp
         if ESP.NameEnabled then
             local nameText = drawings.NameText
             local name = player.Name
@@ -395,7 +394,7 @@ RunService.RenderStepped:Connect(function()
             drawings.NameText.Visible = false
         end
 
-        -- 3D Box ESP
+        -- 3d box
         if ESP.ThreeDBoxEnabled then
             update3DLines(drawings, screenCorners)
         else
@@ -405,10 +404,9 @@ RunService.RenderStepped:Connect(function()
             end
         end
 
-        -- Tracers (solid white, no outlines)
         local targetScreen, targetOnScreen = getTargetScreenPos(character)
         if targetScreen and targetOnScreen then
-            -- Local Player Tracer
+
             if ESP.TracerLocalEnabled then
                 local localChar = LocalPlayer.Character
                 local localRoot = localChar and localChar:FindFirstChild("HumanoidRootPart")
@@ -428,7 +426,7 @@ RunService.RenderStepped:Connect(function()
                 drawings.TracerLocal.Visible = false
             end
 
-            -- Mouse Tracer
+         
             if ESP.TracerMouseEnabled then
                 local mouseScreen = Vector2.new(mousePos.X, mousePos.Y)
                 drawings.TracerMouse.From = mouseScreen
@@ -438,7 +436,7 @@ RunService.RenderStepped:Connect(function()
                 drawings.TracerMouse.Visible = false
             end
 
-            -- Top Tracer
+       
             if ESP.TracerTopEnabled then
                 local screenSize = Camera.ViewportSize
                 local topScreen = Vector2.new(screenSize.X / 2, 0)
@@ -449,7 +447,7 @@ RunService.RenderStepped:Connect(function()
                 drawings.TracerTop.Visible = false
             end
 
-            -- Bottom Tracer
+            -
             if ESP.TracerBottomEnabled then
                 local screenSize = Camera.ViewportSize
                 local bottomScreen = Vector2.new(screenSize.X / 2, screenSize.Y)
