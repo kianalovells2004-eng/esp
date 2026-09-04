@@ -1,152 +1,64 @@
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-
-local LocalPlayer = Players.LocalPlayer
-
-local Movement = {
+local MovementModule = {
+    AutoHop = false,
     SpeedEnabled = false,
-    SpeedValue = 16,
-    JumpEnabled = false,
-    JumpValue = 50,
-    InfJumpEnabled = false,
-    NoclipEnabled = false,
-    NoJumpCooldownEnabled = false,
-    AutoBhopEnabled = false,
-    DisabledConnections = {}
+    SpeedValue = 32,
+    NoJumpCooldown = true
 }
 
--- Disables jump property signal connections responsible for jump delay
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Disable Jump Cooldowns & Fatigue
 local function applyNoJumpCooldown(character)
-    if not Movement.NoJumpCooldownEnabled then return end
+    if not MovementModule.NoJumpCooldown then return end
     local humanoid = character:WaitForChild("Humanoid", 5)
     if not humanoid then return end
 
-    task.spawn(function()
-        local signal = humanoid:GetPropertyChangedSignal("Jump")
-        local connections = (getconnections and getconnections(signal)) or {}
-
-        local retries = 0
-        while #connections == 0 and retries < 20 and Movement.NoJumpCooldownEnabled do
-            task.wait(0.1)
-            connections = (getconnections and getconnections(signal)) or {}
-            retries = retries + 1
+    if getconnections then
+        for _, connection in ipairs(getconnections(humanoid:GetPropertyChangedSignal("Jump"))) do
+            connection:Disable()
         end
+    end
 
-        if Movement.NoJumpCooldownEnabled then
-            for _, conn in ipairs(connections) do
-                if conn.Disable then
-                    conn:Disable()
-                    table.insert(Movement.DisabledConnections, conn)
-                end
-            end
-        end
-    end)
+    humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
 end
 
--- Re-apply on character respawn
-LocalPlayer.CharacterAdded:Connect(function(char)
-    if Movement.NoJumpCooldownEnabled then
-        applyNoJumpCooldown(char)
-    end
-end)
+-- Hook character spawning
+if LocalPlayer.Character then
+    task.spawn(applyNoJumpCooldown, LocalPlayer.Character)
+end
+LocalPlayer.CharacterAdded:Connect(applyNoJumpCooldown)
 
--- Main Loop: Speed, Jump Power, Auto BHop
+-- Core Movement Loop
 RunService.RenderStepped:Connect(function()
-    local char = LocalPlayer.Character
-    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+    local character = LocalPlayer.Character
+    if not character then return end
 
-    if humanoid and humanoid.Health > 0 then
-        if Movement.SpeedEnabled then
-            humanoid.WalkSpeed = Movement.SpeedValue
-        end
-        if Movement.JumpEnabled then
-            humanoid.UseJumpPower = true
-            humanoid.JumpPower = Movement.JumpValue
-        end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
 
-        -- Auto BHop: Triggers jump state instantly upon touching ground while moving
-        if Movement.AutoBhopEnabled then
-            local state = humanoid:GetState()
-            if (humanoid.FloorMaterial ~= Enum.Material.Air or state == Enum.HumanoidStateType.Landed) and humanoid.MoveDirection.Magnitude > 0 then
-                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                humanoid.Jump = true
-            end
+    if not (humanoid and rootPart and humanoid.Health > 0) then return end
+
+    -- AutoHop Trigger
+    if MovementModule.AutoHop and humanoid.FloorMaterial ~= Enum.Material.Air then
+        humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        humanoid.Jump = true
+    end
+
+    -- Direct Velocity Speed Trigger
+    if MovementModule.SpeedEnabled then
+        local moveDirection = humanoid.MoveDirection
+        if moveDirection.Magnitude > 0 then
+            local currentYVelocity = rootPart.AssemblyLinearVelocity.Y
+            rootPart.AssemblyLinearVelocity = Vector3.new(
+                moveDirection.X * MovementModule.SpeedValue,
+                currentYVelocity,
+                moveDirection.Z * MovementModule.SpeedValue
+            )
         end
     end
 end)
 
--- Noclip Loop
-RunService.Stepped:Connect(function()
-    if Movement.NoclipEnabled and LocalPlayer.Character then
-        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") and part.CanCollide then
-                part.CanCollide = false
-            end
-        end
-    end
-end)
-
--- Infinite Jump Connection
-UserInputService.JumpRequest:Connect(function()
-    if Movement.InfJumpEnabled then
-        local char = LocalPlayer.Character
-        local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
-    end
-end)
-
--- Setters
-function Movement:SetSpeed(enabled, value)
-    self.SpeedEnabled = enabled
-    if value then self.SpeedValue = value end
-    
-    local char = LocalPlayer.Character
-    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-    if humanoid and not enabled then
-        humanoid.WalkSpeed = 16
-    end
-end
-
-function Movement:SetJump(enabled, value)
-    self.JumpEnabled = enabled
-    if value then self.JumpValue = value end
-    
-    local char = LocalPlayer.Character
-    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-    if humanoid and not enabled then
-        humanoid.JumpPower = 50
-    end
-end
-
-function Movement:SetNoclip(enabled)
-    self.NoclipEnabled = enabled
-end
-
-function Movement:SetInfJump(enabled)
-    self.InfJumpEnabled = enabled
-end
-
-function Movement:SetAutoBhop(enabled)
-    self.AutoBhopEnabled = enabled
-end
-
-function Movement:SetNoJumpCooldown(enabled)
-    self.NoJumpCooldownEnabled = enabled
-    if enabled then
-        if LocalPlayer.Character then
-            applyNoJumpCooldown(LocalPlayer.Character)
-        end
-    else
-        for _, conn in ipairs(self.DisabledConnections) do
-            if conn.Enable then
-                conn:Enable()
-            end
-        end
-        table.clear(self.DisabledConnections)
-    end
-end
-
-return Movement
+getgenv().MovementModule = MovementModule
+return MovementModule
