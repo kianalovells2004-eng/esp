@@ -1,145 +1,53 @@
-local ESP = loadstring(game:HttpGet("https://raw.githubusercontent.com/kianalovells2004-eng/esp/refs/heads/main/esp.lua"))()
-local Movement = loadstring(game:HttpGet("https://raw.githubusercontent.com/kianalovells2004-eng/movement/refs/heads/main/movement.lua"))()
+-- Fetch movement logic (ensure movement.lua is loaded or executed first)
+local Movement = getgenv().MovementModule or loadstring(game:HttpGet("YOUR_MOVEMENT_LUA_URL_HERE"))()
 
-local library = loadstring(game:GetObjects("rbxassetid://7657867786")[1].Source)("Pepsi's UI Library")
-local window = library:CreateWindow({ Name = "ESP Hub" })
+-- Load Pepsi UI Library
+local PepsiLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/pepsi-ui/pepsi/main/library.lua"))()
 
--- ESP Tab
-local espTab = window:CreateTab({ Name = "ESP" })
-local espSection = espTab:CreateSection({ Name = "Visuals", Side = "Left" })
+local Window = PepsiLibrary:CreateWindow({
+    Name = "Movement Suite",
+    Theme = "Dark"
+})
 
-espSection:AddToggle({
-    Name = "Box ESP",
-    Value = false,
-    Flag = "BoxESP",
-    Callback = function(value)
-        ESP:ToggleBox(value)
+local MovementTab = Window:CreateTab("Movement")
+local MainSection = MovementTab:CreateSection("Bhop & Speed Controls")
+
+-- AutoHop Toggle with 'X' Keybind
+MainSection:CreateToggle({
+    Name = "Auto Hop (Bhop)",
+    Default = false,
+    Keybind = Enum.KeyCode.X,
+    Callback = function(state)
+        Movement.AutoHop = state
     end
 })
 
-espSection:AddToggle({
-    Name = "2D Box Fill",
-    Value = false,
-    Flag = "BoxFill",
-    Callback = function(value)
-        ESP:ToggleBoxFill(value)
+-- Direct Velocity Speed Toggle
+MainSection:CreateToggle({
+    Name = "Velocity Speed",
+    Default = false,
+    Callback = function(state)
+        Movement.SpeedEnabled = state
     end
 })
 
-espSection:AddToggle({
-    Name = "Name ESP",
-    Value = false,
-    Flag = "NameESP",
-    Callback = function(value)
-        ESP:ToggleName(value)
-    end
-})
-
-espSection:AddToggle({
-    Name = "3D Box ESP",
-    Value = false,
-    Flag = "ThreeDBoxESP",
-    Callback = function(value)
-        ESP:Toggle3DBox(value)
-    end
-})
-
-espSection:AddToggle({
-    Name = "Local Player Tracer",
-    Value = false,
-    Flag = "TracerLocal",
-    Callback = function(value)
-        ESP:ToggleTracerLocal(value)
-    end
-})
-
-espSection:AddToggle({
-    Name = "Mouse Tracer",
-    Value = false,
-    Flag = "TracerMouse",
-    Callback = function(value)
-        ESP:ToggleTracerMouse(value)
-    end
-})
-
-espSection:AddToggle({
-    Name = "Top Tracer",
-    Value = false,
-    Flag = "TracerTop",
-    Callback = function(value)
-        ESP:ToggleTracerTop(value)
-    end
-})
-
-espSection:AddToggle({
-    Name = "Bottom Tracer",
-    Value = false,
-    Flag = "TracerBottom",
-    Callback = function(value)
-        ESP:ToggleTracerBottom(value)
-    end
-})
-
--- Movement Tab
-local moveTab = window:CreateTab({ Name = "Movement" })
-local moveSection = moveTab:CreateSection({ Name = "Movement", Side = "Left" })
-
-moveSection:AddToggle({
-    Name = "Fly",
-    Value = false,
-    Flag = "Fly",
-    Callback = function(value)
-        Movement:ToggleFly(value)
-    end
-})
-
-moveSection:AddSlider({
-    Name = "Fly Speed",
-    Min = 10,
-    Max = 200,
-    Value = 50,
-    Flag = "FlySpeed",
-    Callback = function(value)
-        Movement:SetFlySpeed(value)
-    end
-})
-
-moveSection:AddToggle({
-    Name = "Noclip",
-    Value = false,
-    Flag = "Noclip",
-    Callback = function(value)
-        Movement:ToggleNoclip(value)
-    end
-})
-
-moveSection:AddToggle({
-    Name = "Infinite Jump",
-    Value = false,
-    Flag = "InfiniteJump",
-    Callback = function(value)
-        Movement:ToggleInfiniteJump(value)
-    end
-})
-
-moveSection:AddSlider({
-    Name = "Walk Speed",
+-- Speed Slider (Default: 32)
+MainSection:CreateSlider({
+    Name = "Speed Studs",
     Min = 16,
-    Max = 200,
-    Value = 16,
-    Flag = "WalkSpeed",
+    Max = 120,
+    Default = 32,
+    Precision = 0,
     Callback = function(value)
-        Movement:SetWalkSpeed(value)
+        Movement.SpeedValue = value
     end
 })
 
-moveSection:AddSlider({
-    Name = "Jump Power",
-    Min = 50,
-    Max = 200,
-    Value = 50,
-    Flag = "JumpPower",
-    Callback = function(value)
-        Movement:SetJumpPower(value)
+-- No Jump Cooldown Toggle
+MainSection:CreateToggle({
+    Name = "Bypass Jump Cooldown",
+    Default = true,
+    Callback = function(state)
+        Movement.NoJumpCooldown = state
     end
 })
