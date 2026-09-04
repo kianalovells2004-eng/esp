@@ -39,7 +39,7 @@ local function createDrawings(player)
         }),
         BoxOutline = newDrawing("Square", {
             Color = Color3.fromRGB(0, 0, 0),        -- black outline
-            Thickness = 1.5,                        -- now 1.5
+            Thickness = 1.5,
             Filled = false,
             Transparency = 0.5
         }),
@@ -61,7 +61,7 @@ local function createDrawings(player)
         }),
         TracerLocalOutline = newDrawing("Line", {
             Color = Color3.fromRGB(0, 0, 0),        -- black outline
-            Thickness = 1.5,
+            Thickness = 0.9,                        -- changed to 0.9
             Transparency = 0.5
         }),
         TracerMouse = newDrawing("Line", {
@@ -71,7 +71,7 @@ local function createDrawings(player)
         }),
         TracerMouseOutline = newDrawing("Line", {
             Color = Color3.fromRGB(0, 0, 0),        -- black outline
-            Thickness = 1.5,
+            Thickness = 0.9,                        -- changed to 0.9
             Transparency = 0.5
         }),
         TracerTop = newDrawing("Line", {
@@ -81,7 +81,7 @@ local function createDrawings(player)
         }),
         TracerTopOutline = newDrawing("Line", {
             Color = Color3.fromRGB(0, 0, 0),        -- black outline
-            Thickness = 1.5,
+            Thickness = 0.9,                        -- changed to 0.9
             Transparency = 0.5
         }),
         TracerBottom = newDrawing("Line", {
@@ -91,7 +91,7 @@ local function createDrawings(player)
         }),
         TracerBottomOutline = newDrawing("Line", {
             Color = Color3.fromRGB(0, 0, 0),        -- black outline
-            Thickness = 1.5,
+            Thickness = 0.9,                        -- changed to 0.9
             Transparency = 0.5
         })
     }
@@ -100,7 +100,7 @@ local function createDrawings(player)
     for i = 1, 12 do
         drawings.ThreeDOutlines[i] = newDrawing("Line", {
             Color = Color3.fromRGB(0, 0, 0),        -- black outline
-            Thickness = 1.5,                        -- now 1.5
+            Thickness = 1.5,
             Transparency = 0.5
         })
         drawings.ThreeDLines[i] = newDrawing("Line", {
