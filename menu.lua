@@ -67,3 +67,12 @@ section:AddToggle({
         ESP:ToggleTracerBottom(value)
     end
 })
+
+section:AddToggle({
+    Name = "2D Box Fill",
+    Value = false,
+    Flag = "BoxFill",
+    Callback = function(value)
+        ESP:ToggleBoxFill(value)
+    end
+})
