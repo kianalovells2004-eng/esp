@@ -1,83 +1,142 @@
-local rawUrl = "https://raw.githubusercontent.com/kianalovells2004-source/Uni/refs/heads/main/movement.lua"
-local success, result = pcall(game.HttpGet, game, rawUrl)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
-if not success or not result then
-    error("Failed to fetch movement.lua: " .. tostring(result))
+local LocalPlayer = Players.LocalPlayer
+
+local Movement = {
+    SpeedEnabled = false,
+    SpeedValue = 16,
+    JumpEnabled = false,
+    JumpValue = 50,
+    InfJumpEnabled = false,
+    NoclipEnabled = false,
+    NoJumpCooldownEnabled = false,
+    AutoBhopEnabled = false,
+    DisabledConnections = {}
+}
+
+-- Disables the humanoid jump property signal connections responsible for jump delay
+local function applyNoJumpCooldown(character)
+    if not Movement.NoJumpCooldownEnabled then return end
+    local humanoid = character:WaitForChild("Humanoid", 5)
+    if not humanoid then return end
+
+    task.spawn(function()
+        local signal = humanoid:GetPropertyChangedSignal("Jump")
+        local connections = (getconnections and getconnections(signal)) or {}
+
+        -- Wait briefly if client script hasn't bound the signal yet
+        local retries = 0
+        while #connections == 0 and retries < 20 and Movement.NoJumpCooldownEnabled do
+            task.wait(0.1)
+            connections = (getconnections and getconnections(signal)) or {}
+            retries = retries + 1
+        end
+
+        if Movement.NoJumpCooldownEnabled then
+            for _, conn in ipairs(connections) do
+                conn:Disable()
+                table.insert(Movement.DisabledConnections, conn)
+            end
+        end
+    end)
 end
 
-local movementModule, err = loadstring(result)
-if not movementModule then
-    error("Syntax error in movement.lua: " .. tostring(err))
+-- Re-apply on respawn
+LocalPlayer.CharacterAdded:Connect(function(char)
+    if Movement.NoJumpCooldownEnabled then
+        applyNoJumpCooldown(char)
+    end
+end)
+
+-- Movement & Auto BHop Loop
+RunService.RenderStepped:Connect(function()
+    local char = LocalPlayer.Character
+    local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+
+    if humanoid then
+        if Movement.SpeedEnabled then
+            humanoid.WalkSpeed = Movement.SpeedValue
+        end
+        if Movement.JumpEnabled then
+            humanoid.UseJumpPower = true
+            humanoid.JumpPower = Movement.JumpValue
+        end
+
+        -- Auto BHop: Triggers jump state instantly when touching ground while moving
+        if Movement.AutoBhopEnabled and humanoid.FloorMaterial ~= Enum.Material.Air and humanoid.MoveDirection.Magnitude > 0 then
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+-- Noclip Loop
+RunService.Stepped:Connect(function()
+    if Movement.NoclipEnabled and LocalPlayer.Character then
+        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- Infinite Jump connection
+UserInputService.JumpRequest:Connect(function()
+    if Movement.InfJumpEnabled then
+        local char = LocalPlayer.Character
+        local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+function Movement:SetSpeed(enabled, value)
+    self.SpeedEnabled = enabled
+    if value then self.SpeedValue = value end
+    if not enabled and LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid.WalkSpeed = 16 end
+    end
 end
 
-local Movement = movementModule()
-
--- Load Pepsi's UI Library
-local library = loadstring(game:GetObjects("rbxassetid://7657867786")[1].Source)("Pepsi's UI Library")
-local window = library:CreateWindow({ Name = "Uni Hub" })
-
--- Movement Tab
-local movementTab = window:CreateTab({ Name = "Movement" })
-local statsSection = movementTab:CreateSection({ Name = "Stats", Side = "Left" })
-local utilitySection = movementTab:CreateSection({ Name = "Utilities", Side = "Right" })
-
--- Speed Controls
-statsSection:AddToggle({
-    Name = "Enable Speed",
-    Value = false,
-    Flag = "EnableSpeed",
-    Callback = function(state)
-        Movement:SetSpeed(state)
+function Movement:SetJump(enabled, value)
+    self.JumpEnabled = enabled
+    if value then self.JumpValue = value end
+    if not enabled and LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid.JumpPower = 50 end
     end
-})
+end
 
-statsSection:AddSlider({
-    Name = "WalkSpeed",
-    Min = 16,
-    Max = 250,
-    Value = 16,
-    Flag = "WalkSpeedValue",
-    Callback = function(val)
-        Movement.SpeedValue = val
-    end
-})
+function Movement:SetNoclip(enabled)
+    self.NoclipEnabled = enabled
+end
 
--- Jump Controls
-statsSection:AddToggle({
-    Name = "Enable Jump Power",
-    Value = false,
-    Flag = "EnableJump",
-    Callback = function(state)
-        Movement:SetJump(state)
-    end
-})
+function Movement:SetInfJump(enabled)
+    self.InfJumpEnabled = enabled
+end
 
-statsSection:AddSlider({
-    Name = "JumpPower",
-    Min = 50,
-    Max = 300,
-    Value = 50,
-    Flag = "JumpPowerValue",
-    Callback = function(val)
-        Movement.JumpValue = val
-    end
-})
+function Movement:SetAutoBhop(enabled)
+    self.AutoBhopEnabled = enabled
+end
 
--- Utilities
-utilitySection:AddToggle({
-    Name = "Infinite Jump",
-    Value = false,
-    Flag = "InfiniteJump",
-    Callback = function(state)
-        Movement:SetInfJump(state)
+function Movement:SetNoJumpCooldown(enabled)
+    self.NoJumpCooldownEnabled = enabled
+    if enabled then
+        if LocalPlayer.Character then
+            applyNoJumpCooldown(LocalPlayer.Character)
+        end
+    else
+        for _, conn in ipairs(self.DisabledConnections) do
+            if conn.Enable then
+                conn:Enable()
+            end
+        end
+        table.clear(self.DisabledConnections)
     end
-})
+end
 
-utilitySection:AddToggle({
-    Name = "Noclip",
-    Value = false,
-    Flag = "Noclip",
-    Callback = function(state)
-        Movement:SetNoclip(state)
-    end
-})
+return Movement
